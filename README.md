@@ -1,9 +1,3 @@
-Got it — here's the **corrected and professional version** of that section using proper formatting and explanation for each file. I've also cleaned up the entire README structure for clarity.
-
----
-
-### ✅ Full, Cleaned-up `README.md` (Final Version)
-
 ````markdown
 # TimeTableGen – Prolog University Timetable Generator
 
