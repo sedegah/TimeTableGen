@@ -1,45 +1,50 @@
-```markdown
+Got it — here's the **corrected and professional version** of that section using proper formatting and explanation for each file. I've also cleaned up the entire README structure for clarity.
+
+---
+
+### ✅ Full, Cleaned-up `README.md` (Final Version)
+
+````markdown
 # TimeTableGen – Prolog University Timetable Generator
 
-**TimeTableGen** is a constraint-based scheduling engine written in SWI-Prolog for generating valid university lecture timetables. It automatically assigns courses to time slots and rooms based on constraints such as lecturer availability, room capacities, and group size.
-
-This project demonstrates logic programming and constraint resolution using real-world academic scheduling data from CSV input.
+**TimeTableGen** is a logic-based timetable generator built in SWI-Prolog. It assigns university lectures to time slots and rooms while satisfying constraints like lecturer availability, room capacity, and student group size.
 
 ---
 
 ## Features
 
-- CSV-driven input format for courses, lecturers, student groups, rooms, and time slots.
-- Automatic assignment of courses to valid time slots and rooms.
-- Room capacity constraints and group size checks.
-- Lecturer availability constraints and course-hour tracking.
-- No time slot, room, or lecturer conflicts.
-- Command-line constraints:
-  - Specify preferred teaching days.
-  - Exclude specific time slots.
-- Outputs:
-  - Console (ASCII-formatted) table.
-  - CSV export of timetable.
-  - HTML export for browser-friendly viewing.
+- Loads data from a structured CSV file.
+- Automatically generates a valid, conflict-free timetable.
+- Honors:
+  - Course hour requirements
+  - Lecturer availability
+  - Room capacity
+  - Student group overlaps
+- Prevents conflicts (no double-booked lecturers, rooms, or groups).
+- Optional command-line constraints:
+  - Preferred teaching day (e.g., `wed`)
+  - Excluded time slots (e.g., `fri_10`)
+- Exports timetable in:
+  - Console-friendly ASCII format
+  - CSV file (`output.csv`)
+  - Styled HTML (`timetable.html`)
 
 ---
 
-## File Structure
+## Project Files
 
-```
-
-timetable.pl         % Main Prolog codebase
-sample\_input.csv     % Example CSV input
-output.csv           % Generated CSV timetable (output)
-timetable.html       % Generated HTML timetable (output)
-
-````
+| File              | Description                                 |
+|-------------------|---------------------------------------------|
+| `timetable.pl`     | Main Prolog source code                     |
+| `sample_input.csv` | Sample input dataset in structured CSV form |
+| `output.csv`       | Timetable output in CSV format              |
+| `timetable.html`   | Timetable output in browser-viewable HTML   |
 
 ---
 
-## Input Format
+## CSV Input Format
 
-All scheduling data is provided via a single CSV file, structured in **sections separated by empty lines**. Example:
+The CSV file is separated into five sections by **empty lines**:
 
 ```csv
 course_code,hours_per_week,student_groups
@@ -76,19 +81,19 @@ fri_10
 
 ## How to Run
 
-### Option 1: Run interactively inside SWI-Prolog
+### Option 1: Interactively in SWI-Prolog
 
 ```prolog
 ?- load_all_csv('sample_input.csv').
-?- set_preferred_day(wed).           % optional
-?- set_exclude_slot(fri_10).         % optional
+?- set_preferred_day(wed).         % Optional
+?- set_exclude_slot(fri_10).       % Optional
 ?- schedule(Timetable).
 ?- print_timetable(Timetable).
 ?- export_csv(Timetable, 'output.csv').
 ?- export_html(Timetable, 'timetable.html').
 ```
 
-### Option 2: Run everything from CLI (batch mode)
+### Option 2: Single-Command CLI Mode
 
 ```bash
 swipl -s timetable.pl -g "main('sample_input.csv', 'output.csv', 'timetable.html', wed, [fri_10])"
@@ -100,91 +105,66 @@ To run without constraints:
 swipl -s timetable.pl -g "main('sample_input.csv', 'output.csv', 'timetable.html', '', [])"
 ```
 
-To display help:
-
-```bash
-swipl -s timetable.pl -g main
-```
-
 ---
 
-## Available Functions
+## Key Functions
 
-### Scheduling & Validation
+### Scheduling
 
 * `schedule(-Timetable)`
-  Generate a valid timetable based on current facts and constraints.
+  Generates a conflict-free timetable.
 
 * `valid_timetable(+Timetable)`
-  Ensures no room, lecturer, or course conflicts.
+  Ensures the timetable is valid (no overlaps or overbookings).
 
-* `assign_hours/6`
-  Assigns a lecturer to one or more valid time slots.
-
-### CSV Input & Output
+### Input/Output
 
 * `load_all_csv(+FilePath)`
-  Load and assert all facts from a structured CSV file.
+  Parses a CSV file and asserts facts.
 
 * `export_csv(+Timetable, +FilePath)`
-  Save the timetable to a CSV file.
-
-* `print_timetable(+Timetable)`
-  Pretty-print timetable to console.
+  Saves the timetable as a CSV file.
 
 * `export_html(+Timetable, +FilePath)`
-  Export timetable as a styled HTML file.
+  Saves the timetable as a styled HTML file.
 
-### CLI Constraint Helpers
+* `print_timetable(+Timetable)`
+  Displays the timetable as a formatted table in the terminal.
+
+### Constraints
 
 * `set_preferred_day(+DayAtom)`
-  Bias scheduling toward a preferred day prefix (e.g. `wed`).
+  Prefer slots that begin with a specific weekday (e.g., `wed`).
 
 * `set_exclude_slot(+SlotAtom)`
-  Prevent use of a specific time slot (e.g. `fri_10`).
+  Exclude specific time slots from consideration.
 
 ### Entry Point
 
 * `main/0`
-  Shows usage instructions.
+  Displays help/usage instructions.
 
 * `main(+CSVIn, +CSVOut, +HTMLOut, +PreferredDay, +ExcludedSlots)`
-  End-to-end run with custom settings.
-
----
-
-## Example Output (Console)
-
-```
-------------------------------------------
-| Course |     Slot    | Room | Lecturer |
-------------------------------------------
-| cs101  | wed_8       | r101 | john     |
-| cs101  | tue_8       | r101 | john     |
-| cs101  | thu_10      | r101 | john     |
-| cs102  | mon_10      | r102 | alice    |
-| cs102  | tue_10      | r102 | alice    |
-------------------------------------------
-```
+  Full run with parameters for automation and CLI use.
 
 ---
 
 ## Requirements
 
-* [SWI-Prolog](https://www.swi-prolog.org/) ≥ 8.0
-  (Ensure `library(csv)` is available.)
+* [SWI-Prolog](https://www.swi-prolog.org/) (v8.0 or later)
+* CSV input formatted as specified
 
 ---
 
 ## License
 
-MIT License. For educational use, research, and extension.
+MIT License
 
 ---
 
 ## Author
 
-Created by Kimathi Elikplim Sedegah
-University of Ghana | Computer Science
+Kimathi Elikplim Sedegah
+University of Ghana – Computer Science
 GitHub: [@sedegah](https://github.com/sedegah)
 
