@@ -1,4 +1,3 @@
-````markdown
 # TimeTableGen – Prolog University Timetable Generator
 
 **TimeTableGen** is a logic-based timetable generator built in SWI-Prolog. It assigns university lectures to time slots and rooms while satisfying constraints like lecturer availability, room capacity, and student group size.
