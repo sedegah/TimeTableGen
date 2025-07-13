@@ -1,7 +1,3 @@
-Here is a complete, professional-style `README.md` for your **TimeTableGen** repository:
-
----
-
 ```markdown
 # TimeTableGen – Prolog University Timetable Generator
 
