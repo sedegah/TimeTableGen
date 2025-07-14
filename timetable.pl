@@ -24,7 +24,7 @@ assign_slots([CourseCode-Hours-Groups | Rest], Acc, Timetable) :-
     assign_slots(Rest, NewAcc, Timetable).
 
 try_lecturers([], Course, H, G, _, _) :-
-    format("⚠️ Failed to assign course ~w (Hours: ~w, Groups: ~w)~n", [Course, H, G]),
+    format(" Failed to assign course ~w (Hours: ~w, Groups: ~w)~n", [Course, H, G]),
     fail.
 
 try_lecturers([Lecturer-Unavailable | Others], Course, H, G, Acc, NewAcc) :-
@@ -53,8 +53,8 @@ total_group_size(Groups, Total) :-
     sum_list(Sizes, Total).
 
 print_conflict_summary(Timetable) :-
-    (no_conflicts(Timetable) -> true ; writeln("⚠️ Room or Lecturer conflict detected")),
-    (no_double_bookings(Timetable) -> true ; writeln("⚠️ Course double-booked")),
+    (no_conflicts(Timetable) -> true ; writeln(" Room or Lecturer conflict detected")),
+    (no_double_bookings(Timetable) -> true ; writeln(" Course double-booked")),
     true.
 
 no_conflicts([]).
@@ -92,15 +92,25 @@ print_timetable(Timetable) :-
 
 export_html(Timetable, FileName) :-
     open(FileName, write, Stream),
-    write(Stream, '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Timetable</title>'),
-    write(Stream, '<style>table { border-collapse: collapse; width: 80%; margin: 2em auto; }'),
-    write(Stream, 'th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }'),
-    write(Stream, 'th { background: #f2f2f2; }</style></head><body>'),
-    write(Stream, '<h2 style="text-align:center;">University Timetable</h2><table>'),
-    write(Stream, '<tr><th>Course</th><th>Slot</th><th>Room</th><th>Lecturer</th></tr>'),
+    write(Stream, '<!DOCTYPE html>\n'),
+    write(Stream, '<html lang="en">\n<head>\n'),
+    write(Stream, '<meta charset="UTF-8">\n'),
+    write(Stream, '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'),
+    write(Stream, '<title>Timetable</title>\n'),
+    write(Stream, '<style>\n'),
+    write(Stream, 'body { font-family: sans-serif; background: #fafafa; }\n'),
+    write(Stream, 'table { border-collapse: collapse; width: 80%; margin: 2em auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }\n'),
+    write(Stream, 'th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }\n'),
+    write(Stream, 'th { background-color: #f2f2f2; }\n'),
+    write(Stream, 'h2 { text-align: center; color: #333; }\n'),
+    write(Stream, '</style>\n'),
+    write(Stream, '</head>\n<body>\n'),
+    write(Stream, '<h2>University Timetable</h2>\n'),
+    write(Stream, '<table>\n'),
+    write(Stream, '<tr><th>Course</th><th>Slot</th><th>Room</th><th>Lecturer</th></tr>\n'),
     forall(member(course(C, S, R, L), Timetable),
-           format(Stream, '<tr><td>~w</td><td>~w</td><td>~w</td><td>~w</td></tr>', [C, S, R, L])),
-    write(Stream, '</table></body></html>'),
+           format(Stream, '<tr><td>~w</td><td>~w</td><td>~w</td><td>~w</td></tr>\n', [C, S, R, L])),
+    write(Stream, '</table>\n</body>\n</html>'),
     close(Stream).
 
 % ------------------------ CSV Loader ------------------------
@@ -189,7 +199,7 @@ run_scheduler(CSVOut, HTMLOut, PreferredDay, ExcludedSlots) :-
         format("Exporting HTML to: ~w~n", [HTMLOut]),
         export_html(Timetable, HTMLOut),
         halt
-    ; writeln("⚠️ Could not perfectly generate timetable, partial assignments shown above."), halt(1)
+    ; writeln(" Could not perfectly generate timetable, partial assignments shown above."), halt(1)
     ).
 
 print_usage :-
