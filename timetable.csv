@@ -1,0 +1,11 @@
+Course,Slot,Room,Lecturer
+CS101A,mon_14,R1,DrSmith
+CS101A,tue_16,R1,DrSmith
+CS101B,mon_10,R1,DrSmith
+CS101B,mon_14,R1,DrSmith
+CS102,fri_14,R1,DrJones
+MA201,mon_18,R1,DrSmith
+PHY101A,fri_14,R1,DrJones
+PHY101B,tue_18,R1,DrGreen
+ENG101A,thu_18,R1,DrGreen
+ENG101B,wed_8,R1,DrGreen
