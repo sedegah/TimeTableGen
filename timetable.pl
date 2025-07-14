@@ -127,11 +127,11 @@ export_html(Timetable, FileName) :-
 % ------------------------ CSV Loader ------------------------
 
 load_all_csv(_) :-
-    write('Loading courses...\n'), load_courses('courses.csv'),
-    write('Loading lecturers...\n'), load_lecturers('lecturers.csv'),
-    write('Loading groups...\n'), load_groups('groups.csv'),
-    write('Loading rooms...\n'), load_rooms('rooms.csv'),
-    write('Loading slots...\n'), load_slots('slots.csv'),
+    write('Loading courses...\n'), load_courses('input/courses.csv'),
+    write('Loading lecturers...\n'), load_lecturers('input/lecturers.csv'),
+    write('Loading groups...\n'), load_groups('input/groups.csv'),
+    write('Loading rooms...\n'), load_rooms('input/rooms.csv'),
+    write('Loading slots...\n'), load_slots('input/slots.csv'),
     write('Finished loading CSVs.\n').
 
 load_courses(File) :-
