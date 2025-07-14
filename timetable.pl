@@ -24,7 +24,7 @@ assign_slots([CourseCode-Hours-Groups | Rest], Acc, Timetable) :-
     assign_slots(Rest, NewAcc, Timetable).
 
 try_lecturers([], Course, H, G, _, _) :-
-    format(" Failed to assign course ~w (Hours: ~w, Groups: ~w)~n", [Course, H, G]),
+    format("⚠️ Failed to assign course ~w (Hours: ~w, Groups: ~w)~n", [Course, H, G]),
     fail.
 
 try_lecturers([Lecturer-Unavailable | Others], Course, H, G, Acc, NewAcc) :-
@@ -34,17 +34,28 @@ try_lecturers([Lecturer-Unavailable | Others], Course, H, G, Acc, NewAcc) :-
     ; try_lecturers(Others, Course, H, G, Acc, NewAcc)
     ).
 
+% --- FIXED assign_hours with randomized slots and rooms ---
 assign_hours(_, _, 0, _, _, []) :- !.
 assign_hours(Course, Lecturer, Hours, Groups, Unavailable, [course(Course, Slot, Room, Lecturer) | Rest]) :-
     total_group_size(Groups, Size),
+
+    % Get all time slots and shuffle
     findall(S, time_slot(S), Slots),
-    random_permutation(Slots, Shuffled),
-    member(Slot, Shuffled),
-    room(Room, Capacity),
-    Capacity >= Size,
+    random_permutation(Slots, ShuffledSlots),
+    member(Slot, ShuffledSlots),
+
+    % Get all rooms with enough capacity, shuffle rooms
+    findall(room(R, Cap), (room(R, Cap), Cap >= Size), SuitableRooms),
+    random_permutation(SuitableRooms, ShuffledRooms),
+    member(room(Room, _), ShuffledRooms),
+
+    % Ensure slot is available for lecturer and not excluded
     \+ member(Slot, Unavailable),
     \+ exclude_slot(Slot),
+
+    % If preferred day specified, check slot day matches
     ( preferred_day(Day) -> atom_concat(Day, _, Slot) ; true ),
+
     NewH is Hours - 1,
     assign_hours(Course, Lecturer, NewH, Groups, Unavailable, Rest).
 
@@ -53,8 +64,8 @@ total_group_size(Groups, Total) :-
     sum_list(Sizes, Total).
 
 print_conflict_summary(Timetable) :-
-    (no_conflicts(Timetable) -> true ; writeln(" Room or Lecturer conflict detected")),
-    (no_double_bookings(Timetable) -> true ; writeln(" Course double-booked")),
+    (no_conflicts(Timetable) -> true ; writeln("⚠️ Room or Lecturer conflict detected")),
+    (no_double_bookings(Timetable) -> true ; writeln("⚠️ Course double-booked")),
     true.
 
 no_conflicts([]).
@@ -199,7 +210,7 @@ run_scheduler(CSVOut, HTMLOut, PreferredDay, ExcludedSlots) :-
         format("Exporting HTML to: ~w~n", [HTMLOut]),
         export_html(Timetable, HTMLOut),
         halt
-    ; writeln(" Could not perfectly generate timetable, partial assignments shown above."), halt(1)
+    ; writeln("⚠️ Could not perfectly generate timetable, partial assignments shown above."), halt(1)
     ).
 
 print_usage :-
