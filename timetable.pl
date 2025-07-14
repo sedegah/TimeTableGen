@@ -3,6 +3,7 @@
 % ------------------------
 
 :- use_module(library(csv)).
+:- use_module(library(random)).
 :- dynamic course/3, lecturer/3, room/2, group/2, time_slot/1.
 :- dynamic preferred_day/1, exclude_slot/1.
 
@@ -23,37 +24,37 @@ assign_slots([CourseCode-Hours-Groups | Rest], Acc, Timetable) :-
     assign_slots(Rest, NewAcc, Timetable).
 
 try_lecturers([], Course, H, G, _, _) :-
-    format("\u26a0\ufe0f Failed to assign course ~w (Hours: ~w, Groups: ~w)~n", [Course, H, G]),
+    format("⚠️ Failed to assign course ~w (Hours: ~w, Groups: ~w)~n", [Course, H, G]),
     fail.
 
 try_lecturers([Lecturer-Unavailable | Others], Course, H, G, Acc, NewAcc) :-
     format("Attempting ~w for course ~w (~w hours, groups: ~w)~n", [Lecturer, Course, H, G]),
-    ( assign_hours(Course, Lecturer, H, G, Unavailable, Acc, Slots) ->
+    ( assign_hours(Course, Lecturer, H, G, Unavailable, Slots) ->
         append(Acc, Slots, NewAcc)
     ; try_lecturers(Others, Course, H, G, Acc, NewAcc)
     ).
 
-assign_hours(_, _, 0, _, _, _, []) :- !.
-assign_hours(Course, Lecturer, Hours, Groups, Unavailable, Acc, [course(Course, Slot, Room, Lecturer) | Rest]) :-
+assign_hours(_, _, 0, _, _, []) :- !.
+assign_hours(Course, Lecturer, Hours, Groups, Unavailable, [course(Course, Slot, Room, Lecturer) | Rest]) :-
     total_group_size(Groups, Size),
-    time_slot(Slot),
+    findall(S, time_slot(S), Slots),
+    random_permutation(Slots, Shuffled),
+    member(Slot, Shuffled),
     room(Room, Capacity),
     Capacity >= Size,
     \+ member(Slot, Unavailable),
     \+ exclude_slot(Slot),
-    ( \+ preferred_day(_) ; (preferred_day(Day), atom_concat(Day, _, Slot)) ),
-    \+ member(course(_, Slot, Room, _), Acc),
-    \+ member(course(_, Slot, _, Lecturer), Acc),
+    ( preferred_day(Day) -> atom_concat(Day, _, Slot) ; true ),
     NewH is Hours - 1,
-    assign_hours(Course, Lecturer, NewH, Groups, Unavailable, [course(Course, Slot, Room, Lecturer)|Acc], Rest).
+    assign_hours(Course, Lecturer, NewH, Groups, Unavailable, Rest).
 
 total_group_size(Groups, Total) :-
     findall(Size, (member(G, Groups), group(G, Size)), Sizes),
     sum_list(Sizes, Total).
 
 print_conflict_summary(Timetable) :-
-    (no_conflicts(Timetable) -> true ; writeln("\u26a0\ufe0f Room or Lecturer conflict detected")),
-    (no_double_bookings(Timetable) -> true ; writeln("\u26a0\ufe0f Course double-booked")),
+    (no_conflicts(Timetable) -> true ; writeln("⚠️ Room or Lecturer conflict detected")),
+    (no_double_bookings(Timetable) -> true ; writeln("⚠️ Course double-booked")),
     true.
 
 no_conflicts([]).
@@ -188,7 +189,7 @@ run_scheduler(CSVOut, HTMLOut, PreferredDay, ExcludedSlots) :-
         format("Exporting HTML to: ~w~n", [HTMLOut]),
         export_html(Timetable, HTMLOut),
         halt
-    ; writeln("\u26a0\ufe0f Could not perfectly generate timetable, partial assignments shown above."), halt(1)
+    ; writeln("⚠️ Could not perfectly generate timetable, partial assignments shown above."), halt(1)
     ).
 
 print_usage :-
