@@ -1,4 +1,4 @@
-% ------------------------   
+% ------------------------    
 % TimeTableGen - Prolog University Timetable Generator
 % ------------------------
 
@@ -23,7 +23,7 @@ assign_slots([CourseCode-Hours-Groups | Rest], Acc, Timetable) :-
     assign_slots(Rest, NewAcc, Timetable).
 
 try_lecturers([], Course, H, G, _, _) :-
-    format("❌ Failed to assign course ~w (Hours: ~w, Groups: ~w)~n", [Course, H, G]),
+    format("\u274c Failed to assign course ~w (Hours: ~w, Groups: ~w)~n", [Course, H, G]),
     fail.
 
 try_lecturers([Lecturer-Unavailable | Others], Course, H, G, Acc, NewAcc) :-
@@ -36,9 +36,9 @@ try_lecturers([Lecturer-Unavailable | Others], Course, H, G, Acc, NewAcc) :-
 assign_hours(_, _, 0, _, _, []) :- !.
 assign_hours(Course, Lecturer, Hours, Groups, Unavailable, [course(Course, Slot, Room, Lecturer) | Rest]) :-
     total_group_size(Groups, Size),
+    time_slot(Slot),
     room(Room, Capacity),
     Capacity >= Size,
-    time_slot(Slot),
     \+ member(Slot, Unavailable),
     \+ exclude_slot(Slot),
     ( \+ preferred_day(_) ; (preferred_day(Day), atom_concat(Day, _, Slot)) ),
@@ -50,8 +50,8 @@ total_group_size(Groups, Total) :-
     sum_list(Sizes, Total).
 
 valid_timetable(Timetable) :-
-    no_conflicts(Timetable),
-    no_double_bookings(Timetable).
+    (no_conflicts(Timetable) -> true ; writeln("\u274c Room or Lecturer conflict!"), fail),
+    (no_double_bookings(Timetable) -> true ; writeln("\u274c Course double-booked!"), fail).
 
 no_conflicts([]).
 no_conflicts([course(_, Slot, Room, Lecturer) | Rest]) :-
@@ -179,33 +179,55 @@ set_preferred_day(Day) :-
 set_exclude_slot(Slot) :-
     assertz(exclude_slot(Slot)).
 
-% ------------------------ Main Entry Point ------------------------
+% ------------------------ CLI Entry Point ------------------------
 
-main :- print_usage.
+main :-
+    current_prolog_flag(argv, Argv),
+    ( Argv = [CSVOut, HTMLOut, PreferredDayRaw, ExcludedRaw] ->
+        safe_atom(PreferredDayRaw, PreferredDay),
+        safe_string(ExcludedRaw, ExStr),
+        parse_exclude_slots(ExStr, ExcludedSlots),
+        run_scheduler(CSVOut, HTMLOut, PreferredDay, ExcludedSlots)
+    ; Argv = [CSVOut, HTMLOut] ->
+        run_scheduler(CSVOut, HTMLOut, '', [])
+    ; print_usage, halt(1)
+    ).
 
-main(CSVOut, HTMLOut, PreferredDay, ExcludedSlots) :-
+parse_exclude_slots(ExStr, Slots) :-
+    ( sub_string(ExStr, _, _, _, "[") ->
+        term_string(Slots, ExStr)
+    ; split_string(ExStr, ";,", " ", SlotStrings), maplist(safe_atom, SlotStrings, Slots)
+    ).
+
+run_scheduler(CSVOut, HTMLOut, PreferredDay, ExcludedSlots) :-
     write("Loading CSV files...\n"),
     load_all_csv(_),
-    (nonvar(PreferredDay), PreferredDay \= '' -> set_preferred_day(PreferredDay) ; true),
+    (PreferredDay \= '' -> set_preferred_day(PreferredDay) ; true),
     forall(member(Slot, ExcludedSlots), set_exclude_slot(Slot)),
-    schedule(T),
-    print_timetable(T),
-    format("Exporting CSV to: ~w~n", [CSVOut]),
-    export_csv(T, CSVOut),
-    format("Exporting HTML to: ~w~n", [HTMLOut]),
-    export_html(T, HTMLOut),
-    halt.
+    ( schedule(Timetable) ->
+        print_timetable(Timetable),
+        format("Exporting CSV to: ~w~n", [CSVOut]),
+        export_csv(Timetable, CSVOut),
+        format("Exporting HTML to: ~w~n", [HTMLOut]),
+        export_html(Timetable, HTMLOut),
+        halt
+    ; writeln("\u274c Unable to generate a valid timetable. Please check constraints or slot availability."), halt(1)
+    ).
 
 print_usage :-
     nl,
     write("TimeTableGen - Prolog University Timetable Generator"), nl,
     write("---------------------------------------------------"), nl,
-    write("Usage Example:"), nl,
-    write("  swipl -s timetable.pl -g \"main('output.csv', 'timetable.html', wed, [fri_10])\""), nl,
+    write("Usage Examples:"), nl,
+    write("  swipl -s timetable.pl -- output.csv output.html wed \"[fri_10]\""), nl,
+    write("  swipl -s timetable.pl -- output.csv output.html"), nl,
+    nl,
     write("Arguments:"), nl,
     write("  - Input CSVs must exist in same folder: courses.csv, lecturers.csv, groups.csv, rooms.csv, slots.csv"), nl,
     write("  - Output CSV file path"), nl,
     write("  - Output HTML file path"), nl,
-    write("  - Preferred teaching day (e.g. wed) or '' for none"), nl,
-    write("  - List of excluded time slots (e.g. [mon_8, fri_10])"), nl,
+    write("  - (Optional) Preferred teaching day (e.g. wed)"), nl,
+    write("  - (Optional) Excluded time slots (e.g. [mon_8, fri_10])"), nl,
     nl.
+
+:- initialization(main, main).
