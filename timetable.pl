@@ -1,4 +1,4 @@
-% ------------------------    
+% ------------------------     
 % TimeTableGen - Prolog University Timetable Generator
 % ------------------------
 
@@ -12,7 +12,7 @@ schedule(Timetable) :-
     findall(CourseCode-Hours-Groups, course(CourseCode, Hours, Groups), CourseList),
     writeln("Courses to schedule:"), writeln(CourseList),
     assign_slots(CourseList, [], Timetable),
-    valid_timetable(Timetable).
+    print_conflict_summary(Timetable).
 
 assign_slots([], Timetable, Timetable).
 assign_slots([CourseCode-Hours-Groups | Rest], Acc, Timetable) :-
@@ -23,18 +23,18 @@ assign_slots([CourseCode-Hours-Groups | Rest], Acc, Timetable) :-
     assign_slots(Rest, NewAcc, Timetable).
 
 try_lecturers([], Course, H, G, _, _) :-
-    format("\u274c Failed to assign course ~w (Hours: ~w, Groups: ~w)~n", [Course, H, G]),
+    format("\u26a0\ufe0f Failed to assign course ~w (Hours: ~w, Groups: ~w)~n", [Course, H, G]),
     fail.
 
 try_lecturers([Lecturer-Unavailable | Others], Course, H, G, Acc, NewAcc) :-
     format("Attempting ~w for course ~w (~w hours, groups: ~w)~n", [Lecturer, Course, H, G]),
-    ( assign_hours(Course, Lecturer, H, G, Unavailable, Slots) ->
+    ( assign_hours(Course, Lecturer, H, G, Unavailable, Acc, Slots) ->
         append(Acc, Slots, NewAcc)
     ; try_lecturers(Others, Course, H, G, Acc, NewAcc)
     ).
 
-assign_hours(_, _, 0, _, _, []) :- !.
-assign_hours(Course, Lecturer, Hours, Groups, Unavailable, [course(Course, Slot, Room, Lecturer) | Rest]) :-
+assign_hours(_, _, 0, _, _, _, []) :- !.
+assign_hours(Course, Lecturer, Hours, Groups, Unavailable, Acc, [course(Course, Slot, Room, Lecturer) | Rest]) :-
     total_group_size(Groups, Size),
     time_slot(Slot),
     room(Room, Capacity),
@@ -42,16 +42,19 @@ assign_hours(Course, Lecturer, Hours, Groups, Unavailable, [course(Course, Slot,
     \+ member(Slot, Unavailable),
     \+ exclude_slot(Slot),
     ( \+ preferred_day(_) ; (preferred_day(Day), atom_concat(Day, _, Slot)) ),
+    \+ member(course(_, Slot, Room, _), Acc),
+    \+ member(course(_, Slot, _, Lecturer), Acc),
     NewH is Hours - 1,
-    assign_hours(Course, Lecturer, NewH, Groups, Unavailable, Rest).
+    assign_hours(Course, Lecturer, NewH, Groups, Unavailable, [course(Course, Slot, Room, Lecturer)|Acc], Rest).
 
 total_group_size(Groups, Total) :-
     findall(Size, (member(G, Groups), group(G, Size)), Sizes),
     sum_list(Sizes, Total).
 
-valid_timetable(Timetable) :-
-    (no_conflicts(Timetable) -> true ; writeln("\u274c Room or Lecturer conflict!"), fail),
-    (no_double_bookings(Timetable) -> true ; writeln("\u274c Course double-booked!"), fail).
+print_conflict_summary(Timetable) :-
+    (no_conflicts(Timetable) -> true ; writeln("\u26a0\ufe0f Room or Lecturer conflict detected")),
+    (no_double_bookings(Timetable) -> true ; writeln("\u26a0\ufe0f Course double-booked")),
+    true.
 
 no_conflicts([]).
 no_conflicts([course(_, Slot, Room, Lecturer) | Rest]) :-
@@ -99,22 +102,6 @@ export_html(Timetable, FileName) :-
     write(Stream, '</table></body></html>'),
     close(Stream).
 
-% ------------------------ Type-Safe Helpers ------------------------
-
-safe_string(S, Str) :- 
-    (atom(S) -> atom_string(S, Str)
-    ; number(S) -> number_string(S, Str)
-    ; string(S) -> Str = S
-    ).
-
-safe_atom(S, Atom) :-
-    safe_string(S, Str),
-    atom_string(Atom, Str).
-
-safe_number(S, N) :-
-    safe_string(S, Str),
-    atom_number(Str, N).
-
 % ------------------------ CSV Loader ------------------------
 
 load_all_csv(_) :-
@@ -128,65 +115,54 @@ load_all_csv(_) :-
 load_courses(File) :-
     csv_read_file(File, [row(course_code, hours_per_week, student_groups)|Rows], []),
     forall(member(row(Code, Hours, Groups), Rows),
-        ( safe_atom(Code, ACode),
-          safe_number(Hours, HNum),
-          safe_string(Groups, GStr),
-          split_string(GStr, ";", "", GList),
-          maplist(safe_atom, GList, GroupAtoms),
+        ( atom_string(ACode, Code),
+          HNum = Hours,
+          split_string(Groups, ";", "", GList),
+          maplist(atom_string, GroupAtoms, GList),
           assertz(course(ACode, HNum, GroupAtoms))
         )).
 
 load_lecturers(File) :-
     csv_read_file(File, [row(lecturer_name, courses, unavailable_slots)|Rows], []),
     forall(member(row(Name, CourseStr, UnavStr), Rows),
-        ( safe_atom(Name, AName),
-          safe_string(CourseStr, CStr), split_string(CStr, ";", "", CList),
-          safe_string(UnavStr, UStr), split_string(UStr, ";", "", UList),
-          maplist(safe_atom, CList, CourseAtoms),
-          maplist(safe_atom, UList, UnavAtoms),
+        ( atom_string(AName, Name),
+          split_string(CourseStr, ";", "", CList),
+          split_string(UnavStr, ";", "", UList),
+          maplist(atom_string, CourseAtoms, CList),
+          maplist(atom_string, UnavAtoms, UList),
           assertz(lecturer(AName, CourseAtoms, UnavAtoms))
         )).
 
 load_groups(File) :-
     csv_read_file(File, [row(group_name, number_of_students)|Rows], []),
     forall(member(row(Name, Num), Rows),
-        ( safe_atom(Name, AName),
-          safe_number(Num, N),
+        ( atom_string(AName, Name),
+          N = Num,
           assertz(group(AName, N))
         )).
 
 load_rooms(File) :-
     csv_read_file(File, [row(room_id, capacity)|Rows], []),
     forall(member(row(Room, Cap), Rows),
-        ( safe_atom(Room, ARoom),
-          safe_number(Cap, N),
+        ( atom_string(ARoom, Room),
+          N = Cap,
           assertz(room(ARoom, N))
         )).
 
 load_slots(File) :-
     csv_read_file(File, [row(time_slots)|Rows], []),
     forall(member(row(Slot), Rows),
-        ( safe_atom(Slot, ASlot),
+        ( atom_string(ASlot, Slot),
           assertz(time_slot(ASlot))
         )).
-
-% ------------------------ CLI Constraint Helpers ------------------------
-
-set_preferred_day(Day) :-
-    retractall(preferred_day(_)),
-    assertz(preferred_day(Day)).
-
-set_exclude_slot(Slot) :-
-    assertz(exclude_slot(Slot)).
 
 % ------------------------ CLI Entry Point ------------------------
 
 main :-
     current_prolog_flag(argv, Argv),
     ( Argv = [CSVOut, HTMLOut, PreferredDayRaw, ExcludedRaw] ->
-        safe_atom(PreferredDayRaw, PreferredDay),
-        safe_string(ExcludedRaw, ExStr),
-        parse_exclude_slots(ExStr, ExcludedSlots),
+        atom_string(PreferredDay, PreferredDayRaw),
+        parse_exclude_slots(ExcludedRaw, ExcludedSlots),
         run_scheduler(CSVOut, HTMLOut, PreferredDay, ExcludedSlots)
     ; Argv = [CSVOut, HTMLOut] ->
         run_scheduler(CSVOut, HTMLOut, '', [])
@@ -196,14 +172,15 @@ main :-
 parse_exclude_slots(ExStr, Slots) :-
     ( sub_string(ExStr, _, _, _, "[") ->
         term_string(Slots, ExStr)
-    ; split_string(ExStr, ";,", " ", SlotStrings), maplist(safe_atom, SlotStrings, Slots)
+    ; split_string(ExStr, ";,", " ", SlotStrings), maplist(atom_string, SlotStrings, Slots)
     ).
 
 run_scheduler(CSVOut, HTMLOut, PreferredDay, ExcludedSlots) :-
     write("Loading CSV files...\n"),
     load_all_csv(_),
-    (PreferredDay \= '' -> set_preferred_day(PreferredDay) ; true),
-    forall(member(Slot, ExcludedSlots), set_exclude_slot(Slot)),
+    (PreferredDay \= '' -> retractall(preferred_day(_)), assertz(preferred_day(PreferredDay)) ; true),
+    retractall(exclude_slot(_)),
+    forall(member(Slot, ExcludedSlots), assertz(exclude_slot(Slot))),
     ( schedule(Timetable) ->
         print_timetable(Timetable),
         format("Exporting CSV to: ~w~n", [CSVOut]),
@@ -211,7 +188,7 @@ run_scheduler(CSVOut, HTMLOut, PreferredDay, ExcludedSlots) :-
         format("Exporting HTML to: ~w~n", [HTMLOut]),
         export_html(Timetable, HTMLOut),
         halt
-    ; writeln("\u274c Unable to generate a valid timetable. Please check constraints or slot availability."), halt(1)
+    ; writeln("\u26a0\ufe0f Could not perfectly generate timetable, partial assignments shown above."), halt(1)
     ).
 
 print_usage :-
