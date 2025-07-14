@@ -1,0 +1,4 @@
+lecturer_name,courses,unavailable_slots
+DrSmith,CS101A;CS101B;MA201,mon_8;tue_10
+DrJones,CS102;PHY101A,wed_10
+DrGreen,PHY101B;ENG101A;ENG101B,tue_12
