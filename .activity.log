@@ -22,3 +22,4 @@ Optimize schedule generation
 // Refactor CSV reader
 // Refactor CSV reader
 // Bug fix: slot conflict
+// Optimize timetable generation
