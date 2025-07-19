@@ -3,3 +3,4 @@ Fix time slot overlap bug
 Refactor predicate logic
 Improve CSV parsing
 Optimize schedule generation
+Fix time slot overlap bug
