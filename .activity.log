@@ -17,3 +17,4 @@ Optimize schedule generation
 // Enhance Prolog facts parser
 // Optimize timetable generation
 // Bug fix: slot conflict
+// Refactor CSV reader
