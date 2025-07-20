@@ -44,3 +44,4 @@ Optimize schedule generation
 // Bug fix: slot conflict
 // Bug fix: slot conflict
 // Enhance Prolog facts parser
+// Refactor CSV reader
