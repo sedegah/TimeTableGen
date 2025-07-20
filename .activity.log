@@ -33,3 +33,4 @@ Optimize schedule generation
 // Enhance Prolog facts parser
 // Enhance Prolog facts parser
 // Bug fix: slot conflict
+// Optimize timetable generation
