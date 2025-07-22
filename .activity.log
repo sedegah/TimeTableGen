@@ -14,3 +14,4 @@
 // Optimize timetable generation
 // Bug fix: slot conflict
 // Enhance Prolog facts parser
+// Refactor CSV reader
