@@ -38,3 +38,4 @@
 // Optimize timetable generation
 // Refactor CSV reader
 // Enhance Prolog facts parser
+// Bug fix: slot conflict
