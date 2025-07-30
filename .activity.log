@@ -70,3 +70,4 @@
 // Bug fix: slot conflict
 // Refactor CSV reader
 // Refactor CSV reader
+// Enhance Prolog facts parser
