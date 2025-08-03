@@ -100,3 +100,4 @@
 // Bug fix: slot conflict
 // Optimize timetable generation
 // Bug fix: slot conflict
+// Enhance Prolog facts parser
