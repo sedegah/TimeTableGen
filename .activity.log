@@ -115,3 +115,4 @@
 // Refactor CSV reader
 // Optimize timetable generation
 // Optimize timetable generation
+// Bug fix: slot conflict
