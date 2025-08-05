@@ -120,3 +120,4 @@
 // Bug fix: slot conflict
 // Optimize timetable generation
 // Refactor CSV reader
+// Enhance Prolog facts parser
