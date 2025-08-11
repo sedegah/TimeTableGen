@@ -196,3 +196,4 @@
 // Enhance Prolog facts parser
 // Bug fix: slot conflict
 // Enhance Prolog facts parser
+// Refactor CSV reader
