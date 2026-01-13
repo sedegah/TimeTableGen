@@ -7,7 +7,7 @@
 :- dynamic course/3, lecturer/3, room/2, group/2, time_slot/1.
 :- dynamic preferred_day/1, exclude_slot/1.
 
-% ------------------------ Scheduling Core ------------------------
+%                                 Scheduling Core 
 
 schedule(Timetable) :-
     findall(CourseCode-Hours-Groups, course(CourseCode, Hours, Groups), CourseList),
@@ -24,7 +24,7 @@ assign_slots([CourseCode-Hours-Groups | Rest], Acc, Timetable) :-
     assign_slots(Rest, NewAcc, Timetable).
 
 try_lecturers([], Course, H, G, _, _) :-
-    format("⚠️ Failed to assign course ~w (Hours: ~w, Groups: ~w)~n", [Course, H, G]),
+    format(" Failed to assign course ~w (Hours: ~w, Groups: ~w)~n", [Course, H, G]),
     fail.
 
 try_lecturers([Lecturer-Unavailable | Others], Course, H, G, Acc, NewAcc) :-
@@ -34,7 +34,7 @@ try_lecturers([Lecturer-Unavailable | Others], Course, H, G, Acc, NewAcc) :-
     ; try_lecturers(Others, Course, H, G, Acc, NewAcc)
     ).
 
-% --- FIXED assign_hours with randomized slots and rooms ---
+% --- assign_hours with randomized slots and rooms ---
 assign_hours(_, _, 0, _, _, []) :- !.
 assign_hours(Course, Lecturer, Hours, Groups, Unavailable, [course(Course, Slot, Room, Lecturer) | Rest]) :-
     total_group_size(Groups, Size),
@@ -79,7 +79,7 @@ no_double_bookings([course(Course, Slot, _, _) | Rest]) :-
     \+ member(course(Course, Slot, _, _), Rest),
     no_double_bookings(Rest).
 
-% ------------------------ CSV Export ------------------------
+%                                  CSV Export 
 
 export_csv(Timetable, FileName) :-
     open(FileName, write, Stream),
@@ -88,7 +88,7 @@ export_csv(Timetable, FileName) :-
            format(Stream, "~w,~w,~w,~w\n", [C, S, R, L])),
     close(Stream).
 
-% ------------------------ ASCII Printer ------------------------
+%                                  ASCII Printer 
 
 print_timetable(Timetable) :-
     sort(Timetable, Sorted),
@@ -99,7 +99,7 @@ print_timetable(Timetable) :-
            format('| ~w | ~w | ~w | ~w |\n', [C, S, R, L])),
     write('------------------------------------------\n').
 
-% ------------------------ HTML Timetable Export ------------------------
+%                                  HTML Timetable Export 
 
 export_html(Timetable, FileName) :-
     open(FileName, write, Stream),
@@ -124,7 +124,7 @@ export_html(Timetable, FileName) :-
     write(Stream, '</table>\n</body>\n</html>'),
     close(Stream).
 
-% ------------------------ CSV Loader ------------------------
+    %                                          CSV Loader 
 
 load_all_csv(_) :-
     write('Loading courses...\n'), load_courses('input/courses.csv'),
@@ -178,7 +178,7 @@ load_slots(File) :-
           assertz(time_slot(ASlot))
         )).
 
-% ------------------------ CLI Entry Point ------------------------
+%                      CLI Entry Point 
 
 main :-
     current_prolog_flag(argv, Argv),
@@ -210,7 +210,7 @@ run_scheduler(CSVOut, HTMLOut, PreferredDay, ExcludedSlots) :-
         format("Exporting HTML to: ~w~n", [HTMLOut]),
         export_html(Timetable, HTMLOut),
         halt
-    ; writeln("⚠️ Could not perfectly generate timetable, partial assignments shown above."), halt(1)
+    ; writeln(" Could not perfectly generate timetable, partial assignments shown above."), halt(1)
     ).
 
 print_usage :-
