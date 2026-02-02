@@ -7,7 +7,7 @@
 :- dynamic course/3, lecturer/3, room/2, group/2, time_slot/1.
 :- dynamic preferred_day/1, exclude_slot/1.
 
-%                                 Scheduling Core 
+%                                 Scheduling Core
 
 schedule(Timetable) :-
     findall(CourseCode-Hours-Groups, course(CourseCode, Hours, Groups), CourseList),
