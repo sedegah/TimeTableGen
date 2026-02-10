@@ -13,7 +13,7 @@
   - Lecturer availability
   - Room capacity
   - Student group overlaps
-- Prevents conflicts (no double-booked lecturers, rooms, or groups).
+- Prevents conflicts (no double-booked lecturers, rooms, or student groups at the same time).
 - Optional command-line constraints:
   - Preferred teaching day (e.g., `wed`)
   - Excluded time slots (e.g., `fri_10`)
@@ -89,13 +89,19 @@ fri_10
 ### Option 2: Single-Command CLI Mode
 
 ```bash
-swipl -s timetable.pl -g "main('sample_input.csv', 'output.csv', 'timetable.html', wed, [fri_10])"
+swipl -s timetable.pl -- input output.csv timetable.html wed "[fri_10]"
 ```
 
 To run without constraints:
 
 ```bash
-swipl -s timetable.pl -g "main('sample_input.csv', 'output.csv', 'timetable.html', '', [])"
+swipl -s timetable.pl -- input output.csv timetable.html
+```
+
+You can also omit the input directory (defaults to `input`):
+
+```bash
+swipl -s timetable.pl -- output.csv timetable.html
 ```
 
 ---
@@ -112,8 +118,8 @@ swipl -s timetable.pl -g "main('sample_input.csv', 'output.csv', 'timetable.html
 
 ### Input/Output
 
-* `load_all_csv(+FilePath)`
-  Parses a CSV file and asserts facts.
+* `load_all_csv(+InputDir)`
+  Loads CSV files from a directory and asserts facts.
 
 * `export_csv(+Timetable, +FilePath)`
   Saves the timetable as a CSV file.
