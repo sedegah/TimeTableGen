@@ -29,14 +29,14 @@ try_lecturers([], Course, H, G, _, _) :-
 
 try_lecturers([Lecturer-Unavailable | Others], Course, H, G, Acc, NewAcc) :-
     format("Attempting ~w for course ~w (~w hours, groups: ~w)~n", [Lecturer, Course, H, G]),
-    ( assign_hours(Course, Lecturer, H, G, Unavailable, Slots) ->
+    ( assign_hours(Course, Lecturer, H, G, Unavailable, Acc, Slots) ->
         append(Acc, Slots, NewAcc)
     ; try_lecturers(Others, Course, H, G, Acc, NewAcc)
     ).
 
 % --- assign_hours with randomized slots and rooms ---
-assign_hours(_, _, 0, _, _, []) :- !.
-assign_hours(Course, Lecturer, Hours, Groups, Unavailable, [course(Course, Slot, Room, Lecturer) | Rest]) :-
+assign_hours(_, _, 0, _, _, _, []) :- !.
+assign_hours(Course, Lecturer, Hours, Groups, Unavailable, Existing, [course(Course, Slot, Room, Lecturer) | Rest]) :-
     total_group_size(Groups, Size),
 
     % Get all time slots and shuffle
@@ -52,12 +52,23 @@ assign_hours(Course, Lecturer, Hours, Groups, Unavailable, [course(Course, Slot,
     % Ensure slot is available for lecturer and not excluded
     \+ member(Slot, Unavailable),
     \+ exclude_slot(Slot),
+    \+ member(course(Course, Slot, _, _), Existing),
+    slot_available(Existing, Groups, Slot, Room, Lecturer),
 
     % If preferred day specified, check slot day matches
     ( preferred_day(Day) -> atom_concat(Day, _, Slot) ; true ),
 
     NewH is Hours - 1,
-    assign_hours(Course, Lecturer, NewH, Groups, Unavailable, Rest).
+    assign_hours(Course, Lecturer, NewH, Groups, Unavailable,
+                 [course(Course, Slot, Room, Lecturer) | Existing], Rest).
+
+slot_available(Existing, Groups, Slot, Room, Lecturer) :-
+    \+ member(course(_, Slot, Room, _), Existing),
+    \+ member(course(_, Slot, _, Lecturer), Existing),
+    \+ (member(course(OtherCourse, Slot, _, _), Existing),
+        course(OtherCourse, _, OtherGroups),
+        member(G, Groups),
+        member(G, OtherGroups)).
 
 total_group_size(Groups, Total) :-
     findall(Size, (member(G, Groups), group(G, Size)), Sizes),
@@ -126,13 +137,27 @@ export_html(Timetable, FileName) :-
 
     %                                          CSV Loader 
 
-load_all_csv(_) :-
-    write('Loading courses...\n'), load_courses('input/courses.csv'),
-    write('Loading lecturers...\n'), load_lecturers('input/lecturers.csv'),
-    write('Loading groups...\n'), load_groups('input/groups.csv'),
-    write('Loading rooms...\n'), load_rooms('input/rooms.csv'),
-    write('Loading slots...\n'), load_slots('input/slots.csv'),
+load_all_csv(BaseDir) :-
+    retractall(course(_, _, _)),
+    retractall(lecturer(_, _, _)),
+    retractall(group(_, _)),
+    retractall(room(_, _)),
+    retractall(time_slot(_)),
+    base_dir(BaseDir, Dir),
+    atomic_list_concat([Dir, '/courses.csv'], CoursesFile),
+    atomic_list_concat([Dir, '/lecturers.csv'], LecturersFile),
+    atomic_list_concat([Dir, '/groups.csv'], GroupsFile),
+    atomic_list_concat([Dir, '/rooms.csv'], RoomsFile),
+    atomic_list_concat([Dir, '/slots.csv'], SlotsFile),
+    write('Loading courses...\n'), load_courses(CoursesFile),
+    write('Loading lecturers...\n'), load_lecturers(LecturersFile),
+    write('Loading groups...\n'), load_groups(GroupsFile),
+    write('Loading rooms...\n'), load_rooms(RoomsFile),
+    write('Loading slots...\n'), load_slots(SlotsFile),
     write('Finished loading CSVs.\n').
+
+base_dir('', 'input') :- !.
+base_dir(BaseDir, BaseDir).
 
 load_courses(File) :-
     csv_read_file(File, [row(course_code, hours_per_week, student_groups)|Rows], []),
@@ -182,12 +207,18 @@ load_slots(File) :-
 
 main :-
     current_prolog_flag(argv, Argv),
-    ( Argv = [CSVOut, HTMLOut, PreferredDayRaw, ExcludedRaw] ->
+    ( Argv = [CSVInDir, CSVOut, HTMLOut, PreferredDayRaw, ExcludedRaw] ->
         atom_string(PreferredDay, PreferredDayRaw),
         parse_exclude_slots(ExcludedRaw, ExcludedSlots),
-        run_scheduler(CSVOut, HTMLOut, PreferredDay, ExcludedSlots)
+        run_scheduler(CSVInDir, CSVOut, HTMLOut, PreferredDay, ExcludedSlots)
+    ; Argv = [CSVInDir, CSVOut, HTMLOut] ->
+        run_scheduler(CSVInDir, CSVOut, HTMLOut, '', [])
+    ; Argv = [CSVOut, HTMLOut, PreferredDayRaw, ExcludedRaw] ->
+        atom_string(PreferredDay, PreferredDayRaw),
+        parse_exclude_slots(ExcludedRaw, ExcludedSlots),
+        run_scheduler('input', CSVOut, HTMLOut, PreferredDay, ExcludedSlots)
     ; Argv = [CSVOut, HTMLOut] ->
-        run_scheduler(CSVOut, HTMLOut, '', [])
+        run_scheduler('input', CSVOut, HTMLOut, '', [])
     ; print_usage, halt(1)
     ).
 
@@ -197,9 +228,9 @@ parse_exclude_slots(ExStr, Slots) :-
     ; split_string(ExStr, ";,", " ", SlotStrings), maplist(atom_string, SlotStrings, Slots)
     ).
 
-run_scheduler(CSVOut, HTMLOut, PreferredDay, ExcludedSlots) :-
+run_scheduler(CSVInDir, CSVOut, HTMLOut, PreferredDay, ExcludedSlots) :-
     write("Loading CSV files...\n"),
-    load_all_csv(_),
+    load_all_csv(CSVInDir),
     (PreferredDay \= '' -> retractall(preferred_day(_)), assertz(preferred_day(PreferredDay)) ; true),
     retractall(exclude_slot(_)),
     forall(member(Slot, ExcludedSlots), assertz(exclude_slot(Slot))),
@@ -218,11 +249,12 @@ print_usage :-
     write("TimeTableGen - Prolog University Timetable Generator"), nl,
     write("---------------------------------------------------"), nl,
     write("Usage Examples:"), nl,
-    write("  swipl -s timetable.pl -- output.csv output.html wed \"[fri_10]\""), nl,
+    write("  swipl -s timetable.pl -- input output.csv output.html wed \"[fri_10]\""), nl,
+    write("  swipl -s timetable.pl -- input output.csv output.html"), nl,
     write("  swipl -s timetable.pl -- output.csv output.html"), nl,
     nl,
     write("Arguments:"), nl,
-    write("  - Input CSVs must exist in same folder: courses.csv, lecturers.csv, groups.csv, rooms.csv, slots.csv"), nl,
+    write("  - (Optional) Input directory containing courses.csv, lecturers.csv, groups.csv, rooms.csv, slots.csv"), nl,
     write("  - Output CSV file path"), nl,
     write("  - Output HTML file path"), nl,
     write("  - (Optional) Preferred teaching day (e.g. wed)"), nl,
